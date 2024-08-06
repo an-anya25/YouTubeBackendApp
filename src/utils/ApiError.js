@@ -6,7 +6,7 @@ class ApiError extends Error {
     stack = ""
   ) {
     super(message); // Calls the constructor of the parent class (Error) with the message parameter
-    this.statusCode = statusCode; //New property specific to ApiError
+    this.statusCode = statusCode; // New property specific to ApiError
     this.data = null; //New property specific to ApiError
     this.message = message; // Redundant, since `super(message)` already sets this.message
     this.success = false; //New property specific to ApiError
