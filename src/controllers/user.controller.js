@@ -4,6 +4,29 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+// generate access and refresh token
+const generateAccessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    // save refresh token to db
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating access and refresh token"
+    );
+  }
+};
+
+// *************** REGISTER USER *************** //
+
 const registerUser = asyncHandler(async (req, res) => {
   // get user details form frontend
   // validation - not empty
@@ -100,4 +123,103 @@ const registerUser = asyncHandler(async (req, res) => {
   //end
 });
 
-export { registerUser };
+// *************** LOGIN USER *************** //
+
+const loginUser = asyncHandler(async (req, res) => {
+  // get data from req.body
+  // check if username or email exist
+  // find the user
+  // password check
+  // generate access and refresh token
+  // send cookies
+
+  // get data from req.body
+  const { username, email, password } = req.body;
+
+  // check if username or email exist
+  if (!username || !email) {
+    throw new ApiError(400, "Username or email is required");
+  }
+
+  // find the user
+  const user = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  // if user doesnt exist
+  if (!user) {
+    throw new ApiError(404, "User does not exist");
+  }
+
+  // check if password is matching - here the User has methods of mongoose to interact with MongoDB but the user instance has the methods that we have created associated with the schema
+  const isPasswordValid = await user.isPasswordCorrect(password);
+
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid user credentials. Invalid password.");
+  }
+
+  // generate access and refresh token
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    user._id
+  );
+
+  // before calling the generateAccessAndRefreshToken() the user instance has its refreshToken field as empty in db. after that function call finishes only the db is updated. so create a new user instance or update existing instance (this depends on whether that operation is expensive or not). and while sending the response to user password and refresh token fields are not required
+
+  //create logged in user instance
+  const loggedInUser = User.findById(user._id).select(
+    " -password -refreshToken"
+  );
+
+  // send cookies
+
+  //cookies by default is modifyable in the frontend, by using these options it will only be modifyable in the server side
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: loggedInUser,
+          accessToken,
+          refreshToken,
+        },
+        "User logged in successfully"
+      )
+    );
+});
+
+// *************** LOGOUT USER *************** //
+
+const logoutUser = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        refreshToken: undefined,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out"));
+});
+
+export { registerUser, loginUser, logoutUser };
