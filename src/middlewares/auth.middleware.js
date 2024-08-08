@@ -1,7 +1,7 @@
-import { ApiError } from "../utils/ApiError";
-import { asyncHandler } from "../utils/asyncHandler";
+import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
-import { User } from "../models/user.model";
+import { User } from "../models/user.model.js";
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
   try {
@@ -10,7 +10,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
       req.header("Authorization")?.replace("Bearer ", ""); //for tokens from headers. so the header is Authorization and then its format is: Bearer <token> , so its replaced in there to access the token
 
     if (!token) {
-      new ApiError(401, "Unauthorized request");
+      throw new ApiError(401, "Unauthorized request");
     }
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);

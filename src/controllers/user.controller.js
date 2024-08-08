@@ -136,8 +136,9 @@ const loginUser = asyncHandler(async (req, res) => {
   // get data from req.body
   const { username, email, password } = req.body;
 
+
   // check if username or email exist
-  if (!username || !email) {
+  if (!(username || email)) {
     throw new ApiError(400, "Username or email is required");
   }
 
@@ -166,7 +167,7 @@ const loginUser = asyncHandler(async (req, res) => {
   // before calling the generateAccessAndRefreshToken() the user instance has its refreshToken field as empty in db. after that function call finishes only the db is updated. so create a new user instance or update existing instance (this depends on whether that operation is expensive or not). and while sending the response to user password and refresh token fields are not required
 
   //create logged in user instance
-  const loggedInUser = User.findById(user._id).select(
+  const loggedInUser = await User.findById(user._id).select(
     " -password -refreshToken"
   );
 
