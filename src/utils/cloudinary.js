@@ -10,7 +10,7 @@ cloudinary.config({
 const uploadOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) {
-      console.log("localfile path nehi mili");
+      console.log("Did not get localfile path");
       return null;
     }
 
