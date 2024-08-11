@@ -307,7 +307,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const user = User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
@@ -324,7 +324,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 //update avatar
-const updateUserAvatar = asyncHandler(async (res, res) => {
+const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
 
   if (!avatarLocalPath) {
@@ -353,7 +353,7 @@ const updateUserAvatar = asyncHandler(async (res, res) => {
 });
 
 //update cover image
-const updateUserCoverImage = asyncHandler(async (res, res) => {
+const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
 
   if (!coverImageLocalPath) {
