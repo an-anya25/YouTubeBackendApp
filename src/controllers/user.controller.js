@@ -332,6 +332,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar file is missing");
   }
 
+  // TODO: delete old image
+
   const avatar = await uploadOnCloudinary(avatarLocalPath);
 
   if (!avatar.url) {
@@ -360,6 +362,8 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   if (!coverImageLocalPath) {
     throw new ApiError(400, "Cover image file is missing");
   }
+
+  //TODO: delete old image
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
@@ -459,7 +463,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId(`${req.user._id}`)
+        _id: new mongoose.Types.ObjectId(`${req.user._id}`),
       },
     },
     {
