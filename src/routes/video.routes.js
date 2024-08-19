@@ -5,7 +5,7 @@ import {
   deleteVideo,
   getAllVideos,
   getVideoById,
-  publishVideo,
+  publishAVideo,
   togglePublishStatus,
   updateVideo,
 } from "../controllers/video.controller.js";
@@ -28,7 +28,7 @@ router
         maxCount: 1,
       },
     ]),
-    publishVideo
+    publishAVideo
   );
 
 router

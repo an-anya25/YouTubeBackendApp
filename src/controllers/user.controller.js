@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, deleteFile } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -103,7 +103,9 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     avatar: avatar.url,
+    avatarPublicId: avatar.public_id,
     coverImage: coverImage?.url || "",
+    coverImagePublicId: coverImage?.public_id || "",
   });
 
   // remove password and refresh token field from response
@@ -326,13 +328,20 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
 // UPDATE AVATAR
 const updateUserAvatar = asyncHandler(async (req, res) => {
+  const oldUser = await User.findById(req.user?._id);
+
+  const oldAvatarPublicId = oldUser.avatarPublicId;
+
   const avatarLocalPath = req.file?.path;
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is missing");
   }
 
-  // TODO: delete old image
+  const deletedFile = await deleteFile(oldAvatarPublicId, "image");
+  if (!deletedFile) {
+    throw new ApiError(500, "Could not delete the old avatar");
+  }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
 
@@ -345,6 +354,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     {
       $set: {
         avatar: avatar.url,
+        avatarPublicId: avatar.public_id,
       },
     },
     { new: true }
@@ -357,13 +367,21 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
 // UPDATE COVER IMAGE
 const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const oldUser = await User.findById(req.user?._id);
+
+  const oldCoverImagePublicId = oldUser.coverImagePublicId;
+
   const coverImageLocalPath = req.file?.path;
 
   if (!coverImageLocalPath) {
     throw new ApiError(400, "Cover image file is missing");
   }
 
-  //TODO: delete old image
+  const deletedFile = await deleteFile(oldCoverImagePublicId, "image");
+
+  if (!deletedFile) {
+    throw new ApiError(500, "Could not delete the old cover image");
+  }
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
@@ -376,6 +394,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     {
       $set: {
         coverImage: coverImage.url,
+        coverImagePublicId: coverImage.public_id,
       },
     },
     { new: true }
@@ -460,7 +479,7 @@ const getUserChanneProfile = asyncHandler(async (req, res) => {
 
 // GET WATCH HISTORY
 const getWatchHistory = asyncHandler(async (req, res) => {
-  const user = await User.aggregate([
+  const watchHistory = await User.aggregate([
     {
       $match: {
         _id: new mongoose.Types.ObjectId(`${req.user._id}`),
@@ -500,16 +519,27 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         ],
       },
     },
+    {
+      $unwind: "$watchHistory",
+    },
+    {
+      $project: {
+        _id: "$watchHistory._id",
+        thumbnail: "$watchHistory.thumbnail",
+        title: "$watchHistory.title",
+        description: "$watchHistory.description",
+        views: "$watchHistory.views",
+        username: "$watchHistory.owner.username",
+        fullName: "$watchHistory.owner.fullName",
+        avatar: "$watchHistory.owner.avatar",
+      },
+    },
   ]);
 
   return res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        user[0].watchHistory,
-        "Watch history fetched successfully"
-      )
+      new ApiResponse(200, watchHistory, "Watch history fetched successfully")
     );
 });
 
