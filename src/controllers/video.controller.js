@@ -225,6 +225,100 @@ const getVideoById = asyncHandler(async (req, res) => {
   }
 });
 
+// view video by id
+const viewVideoById = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  if (isValidObjectId(videoId)) {
+    const oldVideo = await Video.findById(videoId);
+
+    if (!oldVideo) {
+      throw new ApiError(404, "Video does not exist");
+    }
+
+    if (!oldVideo.isPublished) {
+      throw new ApiError(400, "Video is not published");
+    }
+
+    //update view count
+    try {
+      oldVideo.views += 1;
+      await oldVideo.save();
+    } catch (error) {
+      throw new ApiError(
+        500,
+        error.message || "Something went wrong while updating video views count"
+      );
+    }
+
+    //update user watch history
+    const user = req.user;
+    try {
+      await User.findByIdAndUpdate(user, {
+        $addToSet: {
+          watchHistory: videoId,
+        },
+      });
+    } catch (error) {
+      throw new ApiError(
+        500,
+        error.message ||
+          "Something went wrong while updating user's watch history"
+      );
+    }
+
+    const video = await Video.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(`${videoId}`),
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "owner",
+          pipeline: [
+            {
+              $project: {
+                username: 1,
+                fullName: 1,
+                avatar: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          owner: {
+            $first: "$owner",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          videoFile: 1,
+          thumbnail: 1,
+          title: 1,
+          description: 1,
+          views: 1,
+          fullName: "$owner.fullName",
+          username: "$owner.username",
+          avatar: "$owner.avatar",
+        },
+      },
+    ]);
+    res
+      .status(200)
+      .json(new ApiResponse(200, video[0], "Video fetched successfully"));
+  } else {
+    throw new ApiError(404, "Video does not exist");
+  }
+});
+
 // update video details like title, description, thumbnail
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
@@ -363,6 +457,7 @@ export {
   getAllVideos,
   publishAVideo,
   getVideoById,
+  viewVideoById,
   updateVideo,
   deleteVideo,
   togglePublishStatus,
