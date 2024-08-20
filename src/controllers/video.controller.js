@@ -326,6 +326,11 @@ const updateVideo = asyncHandler(async (req, res) => {
 
   if (isValidObjectId(videoId)) {
     const oldVideo = await Video.findById(videoId);
+
+    if (req.user?._id.toString() !== oldVideo.owner.toString()) {
+      throw new ApiError(400, "Unauthorized request");
+    }
+
     const oldThumbnailPublicId = oldVideo.thumbnailPublicId;
 
     if (!(title || description)) {
@@ -377,6 +382,12 @@ const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
   if (isValidObjectId(videoId)) {
+    const oldVideo = await Video.findById(videoId);
+
+    if (req.user?._id.toString() !== oldVideo.owner.toString()) {
+      throw new ApiError(400, "Unauthorized request");
+    }
+
     const deletedVideo = await Video.findByIdAndDelete(videoId);
 
     const oldVideoFile = deletedVideo.videoFilePublicId;
@@ -417,8 +428,12 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
   if (isValidObjectId(videoId)) {
     const video = await Video.findById(videoId);
 
-    if (!videoId) {
+    if (!video) {
       throw new ApiError(404, "Video does not exist");
+    }
+
+    if (req.user?._id.toString() !== video.owner.toString()) {
+      throw new ApiError(400, "Unauthorized request");
     }
 
     const isPublished = !video.isPublished;
