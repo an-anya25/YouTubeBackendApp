@@ -57,7 +57,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     const playlist = await Playlist.aggregate([
       {
         $match: {
-          _id: new mongoose.Types.ObjectId(`${playlistId}`),
+          _id: new mongoose.Types.ObjectId(`${playlistId}`),  // filters playlist for a specific playlistId.
         },
       },
       {
@@ -77,7 +77,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
             },
           ],
         },
-      },
+      }, // join the owner local field with the videos model. here the owner local field is a ObjectId, so this is utilised to join with the other model, this results are stored as videos. here we use project in a nested pipeline to get the required field from the videos model. so the owner will have these fields.
       {
         $lookup: {
           from: "users",
@@ -94,20 +94,20 @@ const getPlaylistById = asyncHandler(async (req, res) => {
             },
           ],
         },
-      },
+      }, // join the owner local field with the users model. here the owner local field is a ObjectId, so this is utilised to join with the other model, this results are stored as owner. here we use project in a nested pipeline to get the required field from the users model. so the owner will have these fields.
       {
         $addFields: {
           owner: {
             $first: "$owner",
           },
         },
-      },
+      }, // new fields are added to the playlist model, these fields are owner from the lookup. since the model already had fields with same name, which was earlier ObjectId, this is infact a replacement of that field with the lookup results
       {
         $unwind: "$playlistVideos",
-      },
+      }, // unwind is applied here, because playlistVideos is a list containing the details of the videos in the playlist, so to access each video individually and for the ease of projecting unwind is applied
       {
         $project: {
-          _id: "$playlistVideos._id",
+          _id: "$playlistVideos._id", // id of the videos in the playlistVideos are taken for id to be unique.
           name: 1,
           description: 1,
           thumbnail: "$playlistVideos.thumbnail",
@@ -118,7 +118,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
           fullName: "$owner.fullName",
           avatar: "$owner.avatar",
         },
-      },
+      }, // here, each videos in the playlist has its unique videoId. since this is a list that is being returned adding field is not suitable, hence unwind. the name, description are taken from playlist model, and the thumbnail, title, description of video are taken from the playlistVideos field in the playlist model, which is an array of videos model items, the fullName, username, avatar is inside the owner field in the playlist model, so it is projected likedwise.
     ]);
 
     if (playlist.length === 0) {

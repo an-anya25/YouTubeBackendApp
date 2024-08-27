@@ -33,7 +33,7 @@ const getCurrentUserTweets = asyncHandler(async (req, res) => {
   const tweets = await Tweet.aggregate([
     {
       $match: {
-        owner: req.user?._id,
+        owner: req.user?._id, // filters tweet for the currently logged in user
       },
     },
     {
@@ -52,14 +52,14 @@ const getCurrentUserTweets = asyncHandler(async (req, res) => {
           },
         ],
       },
-    },
+    }, // join the owner local field with the users model. here the owner local field is a ObjectId, so this is utilised to join with the other model, this results are stored as owner. here we use project in a nested pipeline to get the required field from the users model. so the owner will have these fields.
     {
       $addFields: {
         owner: {
           $first: "$owner",
         },
       },
-    },
+    }, // new fields are added to the tweet model, these fields are owner from the lookup. since the model already had fields with same name, which was earlier ObjectId, this is infact a replacement of that field with the lookup results
     {
       $project: {
         _id: 1,
@@ -68,7 +68,7 @@ const getCurrentUserTweets = asyncHandler(async (req, res) => {
         fullName: "$owner.fullName",
         avatar: "$owner.avatar",
       },
-    },
+    }, // project so that the output from the aggregate method has a speicfied format. the id and content are sent from the tweets model. username, fullName, avatar are inside the owner field, so it is projected accordingly
   ]);
 
   if (tweets.length === 0) {
@@ -82,14 +82,14 @@ const getCurrentUserTweets = asyncHandler(async (req, res) => {
   }
 });
 
-// get al user tweets
+// get all user tweets
 const getUserTweets = asyncHandler(async (req, res) => {
   const { userId } = req.params;
 
   const tweets = await Tweet.aggregate([
     {
       $match: {
-        owner: new mongoose.Types.ObjectId(`${userId}`),
+        owner: new mongoose.Types.ObjectId(`${userId}`), // filters tweet for a specific userId.
       },
     },
     {
@@ -108,14 +108,14 @@ const getUserTweets = asyncHandler(async (req, res) => {
           },
         ],
       },
-    },
+    }, // join the owner local field with the users model. here the owner local field is a ObjectId, so this is utilised to join with the other model, this results are stored as owner. here we use project in a nested pipeline to get the required field from the users model. so the owner will have these fields.
     {
       $addFields: {
         owner: {
           $first: "$owner",
         },
       },
-    },
+    }, // new fields are added to the tweet model, these fields are owner from the lookup. since the model already had fields with same name, which was earlier ObjectId, this is infact a replacement of that field with the lookup results
     {
       $project: {
         _id: 1,
@@ -124,7 +124,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
         fullName: "$owner.fullName",
         avatar: "$owner.avatar",
       },
-    },
+    }, // project so that the output from the aggregate method has a speicfied format. the id, content are taken from the tweets model. username, fullName, avatar are inside the owner field, so it is projected accordingly
   ]);
 
   res

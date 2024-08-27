@@ -416,7 +416,7 @@ const getUserChanneProfile = asyncHandler(async (req, res) => {
   const channel = await User.aggregate([
     {
       $match: {
-        username: username?.toLowerCase(),
+        username: username?.toLowerCase(), // filters channel for a specific userId
       },
     },
     {
@@ -426,7 +426,7 @@ const getUserChanneProfile = asyncHandler(async (req, res) => {
         foreignField: "channel",
         as: "subscribers",
       },
-    },
+    }, // join the _id local field with the channel in the subscriptions model as subscribers
     {
       $lookup: {
         from: "subscriptions",
@@ -434,13 +434,13 @@ const getUserChanneProfile = asyncHandler(async (req, res) => {
         foreignField: "subscriber",
         as: "subscribedTo",
       },
-    },
+    }, // join the _id local field with the subscriber in the subscriptions model as subscribedTo.
     {
       $addFields: {
         subscribersCount: {
           $size: "$subscribers",
         },
-        channelSubscribedToCount: {
+        channelsSubscribedToCount: {
           $size: "$subscribedTo",
         },
         isSubscribed: {
@@ -451,19 +451,19 @@ const getUserChanneProfile = asyncHandler(async (req, res) => {
           },
         },
       },
-    },
+    }, // new fields are added which are the size of the subscribers and subscribedTo and isSubscribed which checks if the current user is subscribed to the channel
     {
       $project: {
         fullName: 1,
         username: 1,
         subscribersCount: 1,
-        channelSubscribedToCount: 1,
+        channelsSubscribedToCount: 1,
         isSubscribed: 1,
         avatar: 1,
         coverImage: 1,
         email: 1,
       },
-    },
+    }, // the fullName, username, subscribersCount, channelsSubscribedTo, isSubscribed, avatar, coverImage and email fields are taken from the user model
   ]);
 
   if (!channel?.length) {
@@ -482,7 +482,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   const watchHistory = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId(`${req.user._id}`),
+        _id: new mongoose.Types.ObjectId(`${req.user._id}`), //  filters user for the current userId
       },
     },
     {
@@ -508,23 +508,23 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                 },
               ],
             },
-          },
+          }, // join the owner local field of videos model with the users model. use project to project the required fields
           {
             $addFields: {
               owner: {
                 $first: "$owner",
               },
             },
-          },
+          }, // add/replace the owner field to the video model
         ],
-      },
+      }, // join the user model with local field as watchHistory from the video model
     },
     {
-      $unwind: "$watchHistory",
+      $unwind: "$watchHistory", // since watchHistory is an list of users (check model), unwind is used
     },
     {
       $project: {
-        _id: "$watchHistory._id",
+        _id: "$watchHistory._id", // unique id of the watchHistory
         thumbnail: "$watchHistory.thumbnail",
         title: "$watchHistory.title",
         description: "$watchHistory.description",
@@ -533,7 +533,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         fullName: "$watchHistory.owner.fullName",
         avatar: "$watchHistory.owner.avatar",
       },
-    },
+    }, // project the id of the watchHistory, which are actually ids of video model, thumbnail, title, description, views are taken from the watchHistory. username, fullName, avatar exist inside the owner field of watchHistory, so it is projected accordingly
   ]);
 
   return res

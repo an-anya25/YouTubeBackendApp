@@ -87,7 +87,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
     });
 
     if (!like) {
-      like=await Like.create({
+      like = await Like.create({
         tweet: tweetId,
         likedBy,
       });
@@ -96,7 +96,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         tweet: tweetId,
         likedBy,
       });
-      like={}
+      like = {};
     }
 
     res
@@ -112,7 +112,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
   const videos = await Like.aggregate([
     {
       $match: {
-        likedBy: new mongoose.Types.ObjectId(`${req.user?._id}`),
+        likedBy: new mongoose.Types.ObjectId(`${req.user?._id}`), // filters likes for current userID.
       },
     },
     {
@@ -138,21 +138,23 @@ const getLikedVideos = asyncHandler(async (req, res) => {
                 },
               ],
             },
-          },
+          }, // join and project the user on the videos model using the objectId of the owner
           {
             $addFields: {
               owner: {
                 $first: "$owner",
               },
             },
-          },
+          }, // add/replace the owner field into the likedVideos
         ],
       },
-    },
-    { $unwind: "$likedVideos" },
+    }, // here a nested pipeline is used. so the first lookup is done to join the local field videos with the video model. but the video model has a field user which is a ObjectId and can be joined further. so a nested lookup is created to join the videos model with the users model. here project is used to get the required fields in the user in the videos model. and this is then added as a new field/ replacement in the videos model as owner. and here we get this result and other video fields as likedVideos
+    {
+      $unwind: "$likedVideos",
+    }, // unwind is applied here, because likedVideos is a list containing the details of the liked videos, so to access each video individually and for the ease of projecting unwind is applied
     {
       $project: {
-        _id: "$likedVideos._id",
+        _id: "$likedVideos._id", // id of the videos in the likedVideos are taken for id to be unique.
         thumbnail: "$likedVideos.thumbnail",
         title: "$likedVideos.title",
         description: "$likedVideos.description",
@@ -161,8 +163,10 @@ const getLikedVideos = asyncHandler(async (req, res) => {
         username: "$likedVideos.owner.username",
         avatar: "$likedVideos.owner.avatar",
       },
-    },
+    }, // here, each uniquely liked videos has its unique videoId. since this is a list that is being returned adding field is not suitable, hence unwind. the thumbnail, title, description are taken from the likedVideos field, which is an array of videos model items, the fullName, username, avatar is inside the owner field in the likedVideos, so it is projected likedwise.
   ]);
+
+  //before unwind, each document in the collection may have an array field (e.g., likedVideos) that contains multiple documents. $unwind deconstructs the likedVideos array. Each element of the array becomes its own document. This means you will have a separate document for each video in the likedVideos array.
 
   return res
     .status(200)

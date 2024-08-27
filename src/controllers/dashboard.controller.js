@@ -48,7 +48,7 @@ const getCurrentUserChannelVideos = asyncHandler(async (req, res) => {
     const videos = await Video.aggregate([
       {
         $match: {
-          owner: new mongoose.Types.ObjectId(`${req.user?._id}`),
+          owner: new mongoose.Types.ObjectId(`${req.user?._id}`), //  filters videos for the current userID.
         },
       },
       {
@@ -68,14 +68,14 @@ const getCurrentUserChannelVideos = asyncHandler(async (req, res) => {
             },
           ],
         },
-      },
+      }, // join the owner local field with the users model. here the owner local field is a ObjectId, so this is utilised to join with the other model, this results are stored as owner. here we use project in a nested pipeline to get the required field from the users model. so the owner will have these fields.
       {
         $addFields: {
           owner: {
             $first: "$owner",
           },
         },
-      },
+      }, // new fields are added to the video model, these fields are owner from the lookup. since the model already had fields with same name, which was earlier ObjectId, this is infact a replacement of that field with the lookup results
       {
         $project: {
           _id: 1,
@@ -88,7 +88,7 @@ const getCurrentUserChannelVideos = asyncHandler(async (req, res) => {
           coverImage: "$owner.coverImage",
         },
       },
-    ]);
+    ]); // project so that the output from the aggregate method has a speicfied format. the id, thumbnail, title, description are sent from the videos model. username, fullName, avatar are inside the owner field, so it is projected accordingly
 
     res
       .status(200)
@@ -116,7 +116,7 @@ const getChannelVideos = asyncHandler(async (req, res) => {
       const videos = await Video.aggregate([
         {
           $match: {
-            owner: new mongoose.Types.ObjectId(`${channelId}`),
+            owner: new mongoose.Types.ObjectId(`${channelId}`), // filters videos for a specific channel.
           },
         },
         {
@@ -136,14 +136,14 @@ const getChannelVideos = asyncHandler(async (req, res) => {
               },
             ],
           },
-        },
+        },// join the owner local field with the users model. here the owner local field is a ObjectId, so this is utilised to join with the other model, this results are stored as owner. here we use project in a nested pipeline to get the required field from the users model. so the owner will have these fields.
         {
           $addFields: {
             owner: {
               $first: "$owner",
             },
           },
-        },
+        }, // new fields are added to the video model, these fields are owner from the lookup. since the model already had fields with same name, which was earlier ObjectId, this is infact a replacement of that field with the lookup results
         {
           $project: {
             _id: 1,
@@ -155,7 +155,7 @@ const getChannelVideos = asyncHandler(async (req, res) => {
             avatar: "$owner.avatar",
             coverImage: "$owner.coverImage",
           },
-        },
+        }, // project so that the output from the aggregate method has a speicfied format. the id, thumbnail, title, description are sent from the videos model. username, fullName, avatar are inside the owner field, so it is projected accordingly
       ]);
 
       res
